@@ -1,122 +1,106 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from 'react';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import MonacoEditor from './components/Editor/MonacoEditor';
+import { useEditorStore } from './store/useEditorStore';
+import { FS } from './utils/fs';
+import { FolderOpen, File, X } from 'lucide-react';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [files, setFiles] = useState<any[]>([]);
+  const { tabs, activeTabId, openFile, closeTab, setActiveTab } = useEditorStore();
+
+  const loadFiles = async () => {
+    const listed = await FS.listFiles('');
+    setFiles(listed);
+  };
+
+  useEffect(() => {
+    loadFiles();
+  }, []);
+
+  const openSelectedFile = async (file: any) => {
+    if (file.type === 'file') {
+      const content = await FS.readFile(file.uri.replace('file://', ''));
+      openFile(file.uri, file.name, content || '');
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="h-screen flex flex-col bg-[#1e1e1e] text-white overflow-hidden">
+      {/* Title Bar */}
+      <div className="h-10 bg-[#323233] flex items-center px-3 justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-blue-400 font-bold">FS</span>
+          <span className="font-medium">Fountain Studio Code</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        <div className="text-xs text-gray-400">by FountainPDL</div>
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Activity Bar */}
+        <div className="w-12 bg-[#333337] flex flex-col items-center py-2 gap-6">
+          <div className="text-blue-400">◧</div>
+          <div className="text-gray-400 hover:text-white cursor-pointer">🔍</div>
+          <div className="text-gray-400 hover:text-white cursor-pointer">⎇</div>
+          <div className="text-gray-400 hover:text-white cursor-pointer">🧩</div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Sidebar - File Explorer */}
+        <div className="w-72 bg-[#252526] flex flex-col border-r border-[#3c3c3c]">
+          <div className="px-4 py-2 text-xs uppercase tracking-widest text-gray-400">Explorer</div>
+          <div className="flex-1 overflow-auto px-2">
+            {files.map((file, i) => (
+              <div
+                key={i}
+                onClick={() => openSelectedFile(file)}
+                className="flex items-center gap-2 px-2 py-1 hover:bg-[#2a2d2e] cursor-pointer text-sm"
+              >
+                {file.type === 'directory' ? <FolderOpen size={16} /> : <File size={16} />}
+                <span>{file.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Editor Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Tabs */}
+          <div className="h-10 bg-[#1f1f23] flex items-center overflow-x-auto border-b border-[#3c3c3c]">
+            {tabs.map(tab => (
+              <div
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`group flex items-center gap-2 px-4 h-full border-r border-[#3c3c3c] min-w-[120px] hover:bg-[#2d2d2d] cursor-pointer ${activeTabId === tab.id ? 'bg-[#1e1e1e]' : 'bg-[#2d2d2d]'}`}
+              >
+                <span>{tab.name}</span>
+                {tab.isDirty && <span className="text-blue-400">•</span>}
+                <button
+                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
+                  className="opacity-0 group-hover:opacity-100 hover:bg-red-500/50 p-0.5 rounded"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {tabs.length === 0 && (
+              <div className="px-4 text-gray-500">No open tabs</div>
+            )}
+          </div>
+
+          {/* Editor */}
+          <div className="flex-1 overflow-hidden">
+            <MonacoEditor />
+          </div>
+        </div>
+      </div>
+
+      {/* Status Bar */}
+      <div className="h-8 bg-[#007acc] text-xs flex items-center px-3 text-white">
+        <div>Ln 1, Col 1</div>
+        <div className="ml-auto">Fountain Studio Code • Powered by Monaco + Capacitor</div>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
