@@ -1,16 +1,31 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 export const FS = {
+  baseDir: Directory.Documents,
+
+  listFiles: async (path: string = '') => {
+    try {
+      const result = await Filesystem.readdir({ path, directory: FS.baseDir });
+      return result.files.map(f => ({
+        ...f,
+        uri: f.uri || `\( {path}/ \){f.name}`
+      }));
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
   readFile: async (path: string) => {
     try {
       const result = await Filesystem.readFile({
         path,
-        directory: Directory.Documents,
+        directory: FS.baseDir,
         encoding: Encoding.UTF8,
       });
       return result.data;
     } catch (e) {
-      console.error('Read error:', e);
+      console.error(e);
       return '';
     }
   },
@@ -20,36 +35,23 @@ export const FS = {
       await Filesystem.writeFile({
         path,
         data: content,
-        directory: Directory.Documents,
+        directory: FS.baseDir,
         encoding: Encoding.UTF8,
       });
       return true;
     } catch (e) {
-      console.error('Write error:', e);
+      console.error(e);
       return false;
     }
   },
 
-  listFiles: async (path: string = '') => {
-    try {
-      const result = await Filesystem.readdir({
-        path,
-        directory: Directory.Documents,
-      });
-      return result.files;
-    } catch (e) {
-      console.error('List error:', e);
-      return [];
-    }
+  createFile: async (name: string, content: string = '') => {
+    return FS.writeFile(name, content);
   },
 
-  createDirectory: async (path: string) => {
+  createFolder: async (name: string) => {
     try {
-      await Filesystem.mkdir({
-        path,
-        directory: Directory.Documents,
-        recursive: true,
-      });
+      await Filesystem.mkdir({ path: name, directory: FS.baseDir, recursive: true });
       return true;
     } catch (e) {
       console.error(e);
